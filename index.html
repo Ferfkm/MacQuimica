@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tabela Periódica Interativa</title>
+    <!-- Carrega Tailwind CSS para estilização moderna e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define a fonte Inter (padrão) */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fc; /* Fundo claro para contraste */
+        }
+        /* Configuração de cores e classes para as categorias */
+        .alkali-metal { background-color: #ff9999; color: #4b0000; }
+        .alkaline-earth-metal { background-color: #ffcc99; color: #4b2c00; }
+        .transition-metal { background-color: #99ccff; color: #002c4b; }
+        .post-transition-metal { background-color: #99ffcc; color: #004b2c; }
+        .metalloid { background-color: #ffff99; color: #4b4b00; }
+        .nonmetal { background-color: #c0c0c0; color: #2e2e2e; }
+        .noble-gas { background-color: #cc99ff; color: #3b004b; }
+        .halogen { background-color: #ff99ff; color: #4b004b; }
+        .lanthanide { background-color: #ffccff; color: #4b004b; }
+        .actinide { background-color: #c2c2c2; color: #333333; }
+        .unknown { background-color: #dddddd; color: #666666; }
+
+        /* Estilo para cada célula do elemento */
+        .element-cell {
+            position: relative;
+            cursor: pointer;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 0.5rem;
+            min-height: 50px; /* Garante tamanho mínimo */
+        }
+
+        .element-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+            z-index: 10;
+        }
+
+        /* Classes para posicionamento no grid */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(18, minmax(20px, 1fr)); /* 18 colunas */
+            grid-template-rows: repeat(9, auto); /* 7 períodos + 2 linhas L/A */
+            gap: 4px;
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        .pos-1-1 { grid-area: 1 / 1 / 2 / 2; }
+        .pos-1-18 { grid-area: 1 / 18 / 2 / 19; }
+        .pos-2-1 { grid-area: 2 / 1 / 3 / 2; }
+        .pos-2-2 { grid-area: 2 / 2 / 3 / 3; }
+        /* Adicionando as posições dos elementos principais */
+        .pos-2-13 { grid-area: 2 / 13 / 3 / 14; }
+        .pos-3-1 { grid-area: 3 / 1 / 4 / 2; }
+        .pos-3-2 { grid-area: 3 / 2 / 4 / 3; }
+        .pos-4-1 { grid-area: 4 / 1 / 5 / 2; }
+        .pos-4-2 { grid-area: 4 / 2 / 5 / 3; }
+        .pos-5-1 { grid-area: 5 / 1 / 6 / 2; }
+        .pos-5-2 { grid-area: 5 / 2 / 6 / 3; }
+        .pos-6-1 { grid-area: 6 / 1 / 7 / 2; }
+        .pos-6-2 { grid-area: 6 / 2 / 7 / 3; }
+        .pos-7-1 { grid-area: 7 / 1 / 8 / 2; }
+        .pos-7-2 { grid-area: 7 / 2 / 8 / 3; }
+        .pos-6-3 { grid-area: 6 / 3 / 7 / 18; } /* Transição Lanthanídeos */
+        .pos-7-3 { grid-area: 7 / 3 / 8 / 18; } /* Transição Actinídeos */
+
+        /* Para os blocos de Lanthanides e Actinides abaixo */
+        .lanthanide-block { grid-area: 9 / 4 / 10 / 18; display: grid; grid-template-columns: repeat(15, 1fr); gap: 4px; margin-top: 10px; }
+        .actinide-block { grid-area: 10 / 4 / 11 / 18; display: grid; grid-template-columns: repeat(15, 1fr); gap: 4px; }
+        .empty-space { grid-area: 8 / 1 / 9 / 18; } /* Espaço de separação */
+
+        /* Estilo do Modal (Overlay) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            position: relative;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* Estilo responsivo para a célula do elemento em telas pequenas */
+        @media (max-width: 768px) {
+            .grid-container {
+                gap: 2px;
+                padding: 5px;
+            }
+            .element-cell {
+                padding: 0.2rem;
+                min-height: 35px;
+                font-size: 0.6rem;
+            }
+            .symbol { font-size: 1rem !important; font-weight: bold; }
+            .atomic-number { font-size: 0.5rem !important; }
+            .atomic-mass { font-size: 0.5rem !important; }
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8 bg-gray-50 min-h-screen">
+
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-3xl md:text-4xl font-extrabold text-center text-gray-800 mb-6 mt-2">Tabela Periódica Interativa</h1>
+        <p class="text-center text-sm text-gray-600 mb-8">Clique em qualquer elemento para ver seus detalhes e propriedades.</p>
+
+        <!-- Container Principal da Tabela Periódica -->
+        <div id="periodic-table-container" class="grid-container select-none">
+            <!-- Os elementos serão injetados aqui pelo JavaScript -->
+        </div>
+
+        <!-- Legenda de Cores -->
+        <div id="legend" class="mt-8 p-4 bg-white rounded-xl shadow-lg border border-gray-100">
+            <h2 class="text-xl font-bold mb-3 text-gray-700">Legenda (Categorias)</h2>
+            <div id="legend-list" class="flex flex-wrap gap-4 text-xs">
+                <!-- A legenda será injetada aqui -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes do Elemento -->
+    <div id="element-details-modal" class="modal-overlay" onclick="closeElementDetails()">
+        <div class="modal-content w-full md:w-3/4 lg:w-2/3 xl:w-1/2" onclick="event.stopPropagation()">
+            <button class="absolute top-3 right-3 p-2 rounded-full hover:bg-gray-200 text-gray-600" onclick="closeElementDetails()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+            <div id="modal-body">
+                <!-- Os detalhes do elemento serão injetados aqui -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dados de todos os elementos da Tabela Periódica, em Português
+        // (Apenas uma amostra para manter o tamanho do código gerenciável. O código abaixo contém os 118 elementos.)
+        const periodicTableData = [
+            { name_pt: "Hidrogênio", symbol: "H", atomic_number: 1, atomic_mass: 1.008, category: "nonmetal", category_pt: "Não-metal", state_pt: "Gás", density: "0.00008988 g/cm³", melting_point: "-259.16 °C", boiling_point: "-252.87 °C", electronegativity: 2.2, configuration: "1s¹", group: 1, period: 1, x: 1, y: 1, imageUrl: "https://placehold.co/150x150/C0C0C0/2E2E2E?text=H" },
+            { name_pt: "Hélio", symbol: "He", atomic_number: 2, atomic_mass: 4.0026, category: "noble-gas", category_pt: "Gás Nobre", state_pt: "Gás", density: "0.0001786 g/cm³", melting_point: "—", boiling_point: "-268.93 °C", electronegativity: null, configuration: "1s²", group: 18, period: 1, x: 18, y: 1, imageUrl: "https://placehold.co/150x150/CC99FF/3B004B?text=He" },
+            { name_pt: "Lítio", symbol: "Li", atomic_number: 3, atomic_mass: 6.94, category: "alkali-metal", category_pt: "Metal Alcalino", state_pt: "Sólido", density: "0.534 g/cm³", melting_point: "180.50 °C", boiling_point: "1342 °C", electronegativity: 0.98, configuration: "[He] 2s¹", group: 1, period: 2, x: 1, y: 2, imageUrl: "https://placehold.co/150x150/FF9999/4B0000?text=Li" },
+            { name_pt: "Berílio", symbol: "Be", atomic_number: 4, atomic_mass: 9.0122, category: "alkaline-earth-metal", category_pt: "Metal Alcalino-Terroso", state_pt: "Sólido", density: "1.85 g/cm³", melting_point: "1287 °C", boiling_point: "2471 °C", electronegativity: 1.57, configuration: "[He] 2s²", group: 2, period: 2, x: 2, y: 2, imageUrl: "https://placehold.co/150x150/FFCC99/4B2C00?text=Be" },
+            { name_pt: "Boro", symbol: "B", atomic_number: 5, atomic_mass: 10.81, category: "metalloid", category_pt: "Semimetal", state_pt: "Sólido", density: "2.34 g/cm³", melting_point: "2076 °C", boiling_point: "3927 °C", electronegativity: 2.04, configuration: "[He] 2s² 2p¹", group: 13, period: 2, x: 13, y: 2, imageUrl: "https://placehold.co/150x150/FFFF99/4B4B00?text=B" },
+            { name_pt: "Carbono", symbol: "C", atomic_number: 6, atomic_mass: 12.011, category: "nonmetal", category_pt: "Não-metal", state_pt: "Sólido", density: "2.26 g/cm³ (grafite)", melting_point: "—", boiling_point: "4027 °C", electronegativity: 2.55, configuration: "[He] 2s² 2p²", group: 14, period: 2, x: 14, y: 2, imageUrl: "https://placehold.co/150x150/C0C0C0/2E2E2E?text=C" },
+            { name_pt: "Nitrogênio", symbol: "N", atomic_number: 7, atomic_mass: 14.007, category: "nonmetal", category_pt: "Não-metal", state_pt: "Gás", density: "0.0012506 g/cm³", melting_point: "-210.00 °C", boiling_point: "-195.79 °C", electronegativity: 3.04, configuration: "[He] 2s² 2p³", group: 15, period: 2, x: 15, y: 2, imageUrl: "https://placehold.co/150x150/C0C0C0/2E2E2E?text=N" },
+            { name_pt: "Oxigênio", symbol: "O", atomic_number: 8, atomic_mass: 15.999, category: "nonmetal", category_pt: "Não-metal", state_pt: "Gás", density: "0.001429 g/cm³", melting_point: "-218.79 °C", boiling_point: "-182.95 °C", electronegativity: 3.44, configuration: "[He] 2s² 2p⁴", group: 16, period: 2, x: 16, y: 2, imageUrl: "https://placehold.co/150x150/C0C0C0/2E2E2E?text=O" },
+            { name_pt: "Flúor", symbol: "F", atomic_number: 9, atomic_mass: 18.998, category: "halogen", category_pt: "Halogênio", state_pt: "Gás", density: "0.001696 g/cm³", melting_point: "-219.67 °C", boiling_point: "-188.12 °C", electronegativity: 3.98, configuration: "[He] 2s² 2p⁵", group: 17, period: 2, x: 17, y: 2, imageUrl: "https://placehold.co/150x150/FF99FF/4B004B?text=F" },
+            { name_pt: "Neônio", symbol: "Ne", atomic_number: 10, atomic_mass: 20.180, category: "noble-gas", category_pt: "Gás Nobre", state_pt: "Gás", density: "0.0008999 g/cm³", melting_point: "-248.59 °C", boiling_point: "-246.08 °C", electronegativity: null, configuration: "[He] 2s² 2p⁶", group: 18, period: 2, x: 18, y: 2, imageUrl: "https://placehold.co/150x150/CC99FF/3B004B?text=Ne" },
+            { name_pt: "Sódio", symbol: "Na", atomic_number: 11, atomic_mass: 22.990, category: "alkali-metal", category_pt: "Metal Alcalino", state_pt: "Sólido", density: "0.968 g/cm³", melting_point: "97.72 °C", boiling_point: "883 °C", electronegativity: 0.93, configuration: "[Ne] 3s¹", group: 1, period: 3, x: 1, y: 3, imageUrl: "https://placehold.co/150x150/FF9999/4B0000?text=Na" },
+            { name_pt: "Magnésio", symbol: "Mg", atomic_number: 12, atomic_mass: 24.305, category: "alkaline-earth-metal", category_pt: "Metal Alcalino-Terroso", state_pt: "Sólido", density: "1.738 g/cm³", melting_point: "650 °C", boiling_point: "1090 °C", electronegativity: 1.31, configuration: "[Ne] 3s²", group: 2, period: 3, x: 2, y: 3, imageUrl: "https://placehold.co/150x150/FFCC99/4B2C00?text=Mg" },
+            { name_pt: "Alumínio", symbol: "Al", atomic_number: 13, atomic_mass: 26.982, category: "post-transition-metal", category_pt: "Metal Pós-transição", state_pt: "Sólido", density: "2.70 g/cm³", melting_point: "660.32 °C", boiling_point: "2519 °C", electronegativity: 1.61, configuration: "[Ne] 3s² 3p¹", group: 13, period: 3, x: 13, y: 3, imageUrl: "https://placehold.co/150x150/99FFCC/004B2C?text=Al" },
+            { name_pt: "Silício", symbol: "Si", atomic_number: 14, atomic_mass: 28.085, category: "metalloid", category_pt: "Semimetal", state_pt: "Sólido", density: "2.329 g/cm³", melting_point: "1414 °C", boiling_point: "3265 °C", electronegativity: 1.90, configuration: "[Ne] 3s² 3p²", group: 14, period: 3, x: 14, y: 3, imageUrl: "https://placehold.co/150x150/FFFF99/4B4B00?text=Si" },
+            { name_pt: "Fósforo", symbol: "P", atomic_number: 15, atomic_mass: 30.974, category: "nonmetal", category_pt: "Não-metal", state_pt: "Sólido", density: "1.82 g/cm³ (branco)", melting_point: "44.2 °C (branco)", boiling_point: "280.5 °C (branco)", electronegativity: 2.19, configuration: "[Ne] 3s² 3p³", group: 15, period: 3, x: 15, y: 3, imageUrl: "https://placehold.co/150x150/C0C0C0/2E2E2E?text=P" },
+            { name_pt: "Enxofre", symbol: "S", atomic_number: 16, atomic_mass: 32.06, category: "nonmetal", category_pt: "Não-metal", state_pt: "Sólido", density: "2.07 g/cm³", melting_point: "115.21 °C", boiling_point: "444.6 °C", electronegativity: 2.58, configuration: "[Ne] 3s² 3p⁴", group: 16, period: 3, x: 16, y: 3, imageUrl: "https://placehold.co/150x150/C0C0C0/2E2E2E?text=S" },
+            { name_pt: "Cloro", symbol: "Cl", atomic_number: 17, atomic_mass: 35.45, category: "halogen", category_pt: "Halogênio", state_pt: "Gás", density: "0.0032 g/cm³", melting_point: "-101.5 °C", boiling_point: "-34.04 °C", electronegativity: 3.16, configuration: "[Ne] 3s² 3p⁵", group: 17, period: 3, x: 17, y: 3, imageUrl: "https://placehold.co/150x150/FF99FF/4B004B?text=Cl" },
+            { name_pt: "Argônio", symbol: "Ar", atomic_number: 18, atomic_mass: 39.948, category: "noble-gas", category_pt: "Gás Nobre", state_pt: "Gás", density: "0.001784 g/cm³", melting_point: "-189.35 °C", boiling_point: "-185.85 °C", electronegativity: null, configuration: "[Ne] 3s² 3p⁶", group: 18, period: 3, x: 18, y: 3, imageUrl: "https://placehold.co/150x150/CC99FF/3B004B?text=Ar" },
+            // Elementos de 19 a 118 (Completos para o layout do grid)
+            { name_pt: "Potássio", symbol: "K", atomic_number: 19, atomic_mass: 39.098, category: "alkali-metal", category_pt: "Metal Alcalino", state_pt: "Sólido", group: 1, period: 4, x: 1, y: 4, imageUrl: "https://placehold.co/150x150/FF9999/4B0000?text=K" },
+            { name_pt: "Cálcio", symbol: "Ca", atomic_number: 20, atomic_mass: 40.078, category: "alkaline-earth-metal", category_pt: "Metal Alcalino-Terroso", state_pt: "Sólido", group: 2, period: 4, x: 2, y: 4, imageUrl: "https://placehold.co/150x150/FFCC99/4B2C00?text=Ca" },
+            { name_pt: "Escândio", symbol: "Sc", atomic_number: 21, atomic_mass: 44.956, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 3, period: 4, x: 3, y: 4, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Sc" },
+            { name_pt: "Titânio", symbol: "Ti", atomic_number: 22, atomic_mass: 47.867, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 4, period: 4, x: 4, y: 4, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Ti" },
+            { name_pt: "Vanádio", symbol: "V", atomic_number: 23, atomic_mass: 50.942, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 5, period: 4, x: 5, y: 4, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=V" },
+            { name_pt: "Cromo", symbol: "Cr", atomic_number: 24, atomic_mass: 51.996, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 6, period: 4, x: 6, y: 4, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Cr" },
+            { name_pt: "Manganês", symbol: "Mn", atomic_number: 25, atomic_mass: 54.938, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 7, period: 4, x: 7, y: 4, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Mn" },
+            { name_pt: "Ferro", symbol: "Fe", atomic_number: 26, atomic_mass: 55.845, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 8, period: 4, x: 8, y: 4, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Fe" },
+            { name_pt: "Cobalto", symbol: "Co", atomic_number: 27, atomic_mass: 58.933, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 9, period: 4, x: 9, y: 4, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Co" },
+            { name_pt: "Níquel", symbol: "Ni", atomic_number: 28, atomic_mass: 58.693, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 10, period: 4, x: 10, y: 4, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Ni" },
+            { name_pt: "Cobre", symbol: "Cu", atomic_number: 29, atomic_mass: 63.546, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 11, period: 4, x: 11, y: 4, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Cu" },
+            { name_pt: "Zinco", symbol: "Zn", atomic_number: 30, atomic_mass: 65.38, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 12, period: 4, x: 12, y: 4, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Zn" },
+            { name_pt: "Gálio", symbol: "Ga", atomic_number: 31, atomic_mass: 69.723, category: "post-transition-metal", category_pt: "Metal Pós-transição", state_pt: "Sólido", group: 13, period: 4, x: 13, y: 4, imageUrl: "https://placehold.co/150x150/99FFCC/004B2C?text=Ga" },
+            { name_pt: "Germânio", symbol: "Ge", atomic_number: 32, atomic_mass: 72.63, category: "metalloid", category_pt: "Semimetal", state_pt: "Sólido", group: 14, period: 4, x: 14, y: 4, imageUrl: "https://placehold.co/150x150/FFFF99/4B4B00?text=Ge" },
+            { name_pt: "Arsênio", symbol: "As", atomic_number: 33, atomic_mass: 74.922, category: "metalloid", category_pt: "Semimetal", state_pt: "Sólido", group: 15, period: 4, x: 15, y: 4, imageUrl: "https://placehold.co/150x150/FFFF99/4B4B00?text=As" },
+            { name_pt: "Selênio", symbol: "Se", atomic_number: 34, atomic_mass: 78.971, category: "nonmetal", category_pt: "Não-metal", state_pt: "Sólido", group: 16, period: 4, x: 16, y: 4, imageUrl: "https://placehold.co/150x150/C0C0C0/2E2E2E?text=Se" },
+            { name_pt: "Bromo", symbol: "Br", atomic_number: 35, atomic_mass: 79.904, category: "halogen", category_pt: "Halogênio", state_pt: "Líquido", group: 17, period: 4, x: 17, y: 4, imageUrl: "https://placehold.co/150x150/FF99FF/4B004B?text=Br" },
+            { name_pt: "Criptônio", symbol: "Kr", atomic_number: 36, atomic_mass: 83.798, category: "noble-gas", category_pt: "Gás Nobre", state_pt: "Gás", group: 18, period: 4, x: 18, y: 4, imageUrl: "https://placehold.co/150x150/CC99FF/3B004B?text=Kr" },
+
+            { name_pt: "Rubídio", symbol: "Rb", atomic_number: 37, atomic_mass: 85.468, category: "alkali-metal", category_pt: "Metal Alcalino", state_pt: "Sólido", group: 1, period: 5, x: 1, y: 5, imageUrl: "https://placehold.co/150x150/FF9999/4B0000?text=Rb" },
+            { name_pt: "Estrôncio", symbol: "Sr", atomic_number: 38, atomic_mass: 87.62, category: "alkaline-earth-metal", category_pt: "Metal Alcalino-Terroso", state_pt: "Sólido", group: 2, period: 5, x: 2, y: 5, imageUrl: "https://placehold.co/150x150/FFCC99/4B2C00?text=Sr" },
+            { name_pt: "Ítrio", symbol: "Y", atomic_number: 39, atomic_mass: 88.906, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 3, period: 5, x: 3, y: 5, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Y" },
+            { name_pt: "Zircônio", symbol: "Zr", atomic_number: 40, atomic_mass: 91.224, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 4, period: 5, x: 4, y: 5, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Zr" },
+            { name_pt: "Nióbio", symbol: "Nb", atomic_number: 41, atomic_mass: 92.906, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 5, period: 5, x: 5, y: 5, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Nb" },
+            { name_pt: "Molibdênio", symbol: "Mo", atomic_number: 42, atomic_mass: 95.96, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 6, period: 5, x: 6, y: 5, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Mo" },
+            { name_pt: "Tecnécio", symbol: "Tc", atomic_number: 43, atomic_mass: 98.907, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 7, period: 5, x: 7, y: 5, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Tc" },
+            { name_pt: "Rutênio", symbol: "Ru", atomic_number: 44, atomic_mass: 101.07, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 8, period: 5, x: 8, y: 5, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Ru" },
+            { name_pt: "Ródio", symbol: "Rh", atomic_number: 45, atomic_mass: 102.91, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 9, period: 5, x: 9, y: 5, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Rh" },
+            { name_pt: "Paládio", symbol: "Pd", atomic_number: 46, atomic_mass: 106.42, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 10, period: 5, x: 10, y: 5, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Pd" },
+            { name_pt: "Prata", symbol: "Ag", atomic_number: 47, atomic_mass: 107.87, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 11, period: 5, x: 11, y: 5, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Ag" },
+            { name_pt: "Cádmio", symbol: "Cd", atomic_number: 48, atomic_mass: 112.41, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 12, period: 5, x: 12, y: 5, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Cd" },
+            { name_pt: "Índio", symbol: "In", atomic_number: 49, atomic_mass: 114.82, category: "post-transition-metal", category_pt: "Metal Pós-transição", state_pt: "Sólido", group: 13, period: 5, x: 13, y: 5, imageUrl: "https://placehold.co/150x150/99FFCC/004B2C?text=In" },
+            { name_pt: "Estanho", symbol: "Sn", atomic_number: 50, atomic_mass: 118.71, category: "post-transition-metal", category_pt: "Metal Pós-transição", state_pt: "Sólido", group: 14, period: 5, x: 14, y: 5, imageUrl: "https://placehold.co/150x150/99FFCC/004B2C?text=Sn" },
+            { name_pt: "Antimônio", symbol: "Sb", atomic_number: 51, atomic_mass: 121.76, category: "metalloid", category_pt: "Semimetal", state_pt: "Sólido", group: 15, period: 5, x: 15, y: 5, imageUrl: "https://placehold.co/150x150/FFFF99/4B4B00?text=Sb" },
+            { name_pt: "Telúrio", symbol: "Te", atomic_number: 52, atomic_mass: 127.60, category: "metalloid", category_pt: "Semimetal", state_pt: "Sólido", group: 16, period: 5, x: 16, y: 5, imageUrl: "https://placehold.co/150x150/FFFF99/4B4B00?text=Te" },
+            { name_pt: "Iodo", symbol: "I", atomic_number: 53, atomic_mass: 126.90, category: "halogen", category_pt: "Halogênio", state_pt: "Sólido", group: 17, period: 5, x: 17, y: 5, imageUrl: "https://placehold.co/150x150/FF99FF/4B004B?text=I" },
+            { name_pt: "Xenônio", symbol: "Xe", atomic_number: 54, atomic_mass: 131.29, category: "noble-gas", category_pt: "Gás Nobre", state_pt: "Gás", group: 18, period: 5, x: 18, y: 5, imageUrl: "https://placehold.co/150x150/CC99FF/3B004B?text=Xe" },
+
+            { name_pt: "Césio", symbol: "Cs", atomic_number: 55, atomic_mass: 132.91, category: "alkali-metal", category_pt: "Metal Alcalino", state_pt: "Sólido", group: 1, period: 6, x: 1, y: 6, imageUrl: "https://placehold.co/150x150/FF9999/4B0000?text=Cs" },
+            { name_pt: "Bário", symbol: "Ba", atomic_number: 56, atomic_mass: 137.33, category: "alkaline-earth-metal", category_pt: "Metal Alcalino-Terroso", state_pt: "Sólido", group: 2, period: 6, x: 2, y: 6, imageUrl: "https://placehold.co/150x150/FFCC99/4B2C00?text=Ba" },
+            { name_pt: "Lantânio", symbol: "La", atomic_number: 57, atomic_mass: 138.91, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: 3, period: 6, x: 3, y: 6, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=La" },
+            { name_pt: "Cério", symbol: "Ce", atomic_number: 58, atomic_mass: 140.12, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 4, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Ce" },
+            { name_pt: "Praseodímio", symbol: "Pr", atomic_number: 59, atomic_mass: 140.91, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 5, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Pr" },
+            { name_pt: "Neodímio", symbol: "Nd", atomic_number: 60, atomic_mass: 144.24, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 6, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Nd" },
+            { name_pt: "Promécio", symbol: "Pm", atomic_number: 61, atomic_mass: 145, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 7, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Pm" },
+            { name_pt: "Samário", symbol: "Sm", atomic_number: 62, atomic_mass: 150.36, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 8, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Sm" },
+            { name_pt: "Európio", symbol: "Eu", atomic_number: 63, atomic_mass: 151.96, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 9, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Eu" },
+            { name_pt: "Gadolínio", symbol: "Gd", atomic_number: 64, atomic_mass: 157.25, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 10, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Gd" },
+            { name_pt: "Térbio", symbol: "Tb", atomic_number: 65, atomic_mass: 158.93, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 11, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Tb" },
+            { name_pt: "Disprósio", symbol: "Dy", atomic_number: 66, atomic_mass: 162.50, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 12, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Dy" },
+            { name_pt: "Hólmio", symbol: "Ho", atomic_number: 67, atomic_mass: 164.93, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 13, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Ho" },
+            { name_pt: "Érbio", symbol: "Er", atomic_number: 68, atomic_mass: 167.26, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 14, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Er" },
+            { name_pt: "Túlio", symbol: "Tm", atomic_number: 69, atomic_mass: 168.93, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 15, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Tm" },
+            { name_pt: "Itérbio", symbol: "Yb", atomic_number: 70, atomic_mass: 173.05, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 16, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Yb" },
+            { name_pt: "Lutécio", symbol: "Lu", atomic_number: 71, atomic_mass: 174.97, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 3, period: 6, x: 17, y: 6, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Lu" },
+            { name_pt: "Háfnio", symbol: "Hf", atomic_number: 72, atomic_mass: 178.49, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 4, period: 6, x: 4, y: 6, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Hf" },
+            { name_pt: "Tântalo", symbol: "Ta", atomic_number: 73, atomic_mass: 180.95, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 5, period: 6, x: 5, y: 6, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Ta" },
+            { name_pt: "Tungstênio", symbol: "W", atomic_number: 74, atomic_mass: 183.84, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 6, period: 6, x: 6, y: 6, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=W" },
+            { name_pt: "Rênio", symbol: "Re", atomic_number: 75, atomic_mass: 186.21, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 7, period: 6, x: 7, y: 6, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Re" },
+            { name_pt: "Ósmio", symbol: "Os", atomic_number: 76, atomic_mass: 190.23, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 8, period: 6, x: 8, y: 6, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Os" },
+            { name_pt: "Irídio", symbol: "Ir", atomic_number: 77, atomic_mass: 192.22, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 9, period: 6, x: 9, y: 6, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Ir" },
+            { name_pt: "Platina", symbol: "Pt", atomic_number: 78, atomic_mass: 195.08, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 10, period: 6, x: 10, y: 6, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Pt" },
+            { name_pt: "Ouro", symbol: "Au", atomic_number: 79, atomic_mass: 196.97, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 11, period: 6, x: 11, y: 6, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Au" },
+            { name_pt: "Mercúrio", symbol: "Hg", atomic_number: 80, atomic_mass: 200.59, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Líquido", group: 12, period: 6, x: 12, y: 6, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Hg" },
+            { name_pt: "Tálio", symbol: "Tl", atomic_number: 81, atomic_mass: 204.38, category: "post-transition-metal", category_pt: "Metal Pós-transição", state_pt: "Sólido", group: 13, period: 6, x: 13, y: 6, imageUrl: "https://placehold.co/150x150/99FFCC/004B2C?text=Tl" },
+            { name_pt: "Chumbo", symbol: "Pb", atomic_number: 82, atomic_mass: 207.2, category: "post-transition-metal", category_pt: "Metal Pós-transição", state_pt: "Sólido", group: 14, period: 6, x: 14, y: 6, imageUrl: "https://placehold.co/150x150/99FFCC/004B2C?text=Pb" },
+            { name_pt: "Bismuto", symbol: "Bi", atomic_number: 83, atomic_mass: 208.98, category: "post-transition-metal", category_pt: "Metal Pós-transição", state_pt: "Sólido", group: 15, period: 6, x: 15, y: 6, imageUrl: "https://placehold.co/150x150/99FFCC/004B2C?text=Bi" },
+            { name_pt: "Polônio", symbol: "Po", atomic_number: 84, atomic_mass: 209, category: "post-transition-metal", category_pt: "Metal Pós-transição", state_pt: "Sólido", group: 16, period: 6, x: 16, y: 6, imageUrl: "https://placehold.co/150x150/99FFCC/004B2C?text=Po" },
+            { name_pt: "Astato", symbol: "At", atomic_number: 85, atomic_mass: 210, category: "halogen", category_pt: "Halogênio", state_pt: "Sólido", group: 17, period: 6, x: 17, y: 6, imageUrl: "https://placehold.co/150x150/FF99FF/4B004B?text=At" },
+            { name_pt: "Radônio", symbol: "Rn", atomic_number: 86, atomic_mass: 222, category: "noble-gas", category_pt: "Gás Nobre", state_pt: "Gás", group: 18, period: 6, x: 18, y: 6, imageUrl: "https://placehold.co/150x150/CC99FF/3B004B?text=Rn" },
+
+            { name_pt: "Frâncio", symbol: "Fr", atomic_number: 87, atomic_mass: 223, category: "alkali-metal", category_pt: "Metal Alcalino", state_pt: "Sólido", group: 1, period: 7, x: 1, y: 7, imageUrl: "https://placehold.co/150x150/FF9999/4B0000?text=Fr" },
+            { name_pt: "Rádio", symbol: "Ra", atomic_number: 88, atomic_mass: 226, category: "alkaline-earth-metal", category_pt: "Metal Alcalino-Terroso", state_pt: "Sólido", group: 2, period: 7, x: 2, y: 7, imageUrl: "https://placehold.co/150x150/FFCC99/4B2C00?text=Ra" },
+            { name_pt: "Actínio", symbol: "Ac", atomic_number: 89, atomic_mass: 227, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: 3, period: 7, x: 3, y: 7, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Ac" },
+            { name_pt: "Tório", symbol: "Th", atomic_number: 90, atomic_mass: 232.04, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 4, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Th" },
+            { name_pt: "Protactínio", symbol: "Pa", atomic_number: 91, atomic_mass: 231.04, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 5, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Pa" },
+            { name_pt: "Urânio", symbol: "U", atomic_number: 92, atomic_mass: 238.03, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 6, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=U" },
+            { name_pt: "Netúnio", symbol: "Np", atomic_number: 93, atomic_mass: 237, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 7, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Np" },
+            { name_pt: "Plutônio", symbol: "Pu", atomic_number: 94, atomic_mass: 244, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 8, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Pu" },
+            { name_pt: "Amerício", symbol: "Am", atomic_number: 95, atomic_mass: 243, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 9, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Am" },
+            { name_pt: "Cúrio", symbol: "Cm", atomic_number: 96, atomic_mass: 247, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 10, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Cm" },
+            { name_pt: "Berquélio", symbol: "Bk", atomic_number: 97, atomic_mass: 247, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 11, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Bk" },
+            { name_pt: "Califórnio", symbol: "Cf", atomic_number: 98, atomic_mass: 251, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 12, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Cf" },
+            { name_pt: "Einstênio", symbol: "Es", atomic_number: 99, atomic_mass: 252, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 13, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Es" },
+            { name_pt: "Férmio", symbol: "Fm", atomic_number: 100, atomic_mass: 257, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 14, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Fm" },
+            { name_pt: "Mendelévio", symbol: "Md", atomic_number: 101, atomic_mass: 258, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 15, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Md" },
+            { name_pt: "Nobélio", symbol: "No", atomic_number: 102, atomic_mass: 259, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 16, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=No" },
+            { name_pt: "Laurêncio", symbol: "Lr", atomic_number: 103, atomic_mass: 262, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 3, period: 7, x: 17, y: 7, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Lr" },
+            { name_pt: "Rutherfórdio", symbol: "Rf", atomic_number: 104, atomic_mass: 267, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 4, period: 7, x: 4, y: 7, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Rf" },
+            { name_pt: "Dúbnio", symbol: "Db", atomic_number: 105, atomic_mass: 268, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 5, period: 7, x: 5, y: 7, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Db" },
+            { name_pt: "Seabórgio", symbol: "Sg", atomic_number: 106, atomic_mass: 271, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 6, period: 7, x: 6, y: 7, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Sg" },
+            { name_pt: "Bóhrio", symbol: "Bh", atomic_number: 107, atomic_mass: 272, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 7, period: 7, x: 7, y: 7, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Bh" },
+            { name_pt: "Hássio", symbol: "Hs", atomic_number: 108, atomic_mass: 270, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Sólido", group: 8, period: 7, x: 8, y: 7, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Hs" },
+            { name_pt: "Meitnério", symbol: "Mt", atomic_number: 109, atomic_mass: 276, category: "unknown", category_pt: "Propriedades Desconhecidas", state_pt: "Previsto: Sólido", group: 9, period: 7, x: 9, y: 7, imageUrl: "https://placehold.co/150x150/DDDDDD/666666?text=Mt" },
+            { name_pt: "Darmstádtio", symbol: "Ds", atomic_number: 110, atomic_mass: 281, category: "unknown", category_pt: "Propriedades Desconhecidas", state_pt: "Previsto: Sólido", group: 10, period: 7, x: 10, y: 7, imageUrl: "https://placehold.co/150x150/DDDDDD/666666?text=Ds" },
+            { name_pt: "Roentgênio", symbol: "Rg", atomic_number: 111, atomic_mass: 280, category: "unknown", category_pt: "Propriedades Desconhecidas", state_pt: "Previsto: Sólido", group: 11, period: 7, x: 11, y: 7, imageUrl: "https://placehold.co/150x150/DDDDDD/666666?text=Rg" },
+            { name_pt: "Copernício", symbol: "Cn", atomic_number: 112, atomic_mass: 285, category: "transition-metal", category_pt: "Metal de Transição", state_pt: "Previsto: Líquido/Gás", group: 12, period: 7, x: 12, y: 7, imageUrl: "https://placehold.co/150x150/99CCFF/002C4B?text=Cn" },
+            { name_pt: "Nihônio", symbol: "Nh", atomic_number: 113, atomic_mass: 286, category: "post-transition-metal", category_pt: "Metal Pós-transição", state_pt: "Previsto: Sólido", group: 13, period: 7, x: 13, y: 7, imageUrl: "https://placehold.co/150x150/99FFCC/004B2C?text=Nh" },
+            { name_pt: "Fleróvio", symbol: "Fl", atomic_number: 114, atomic_mass: 289, category: "post-transition-metal", category_pt: "Metal Pós-transição", state_pt: "Previsto: Gás/Líquido", group: 14, period: 7, x: 14, y: 7, imageUrl: "https://placehold.co/150x150/99FFCC/004B2C?text=Fl" },
+            { name_pt: "Moscóvio", symbol: "Mc", atomic_number: 115, atomic_mass: 290, category: "post-transition-metal", category_pt: "Metal Pós-transição", state_pt: "Previsto: Sólido", group: 15, period: 7, x: 15, y: 7, imageUrl: "https://placehold.co/150x150/99FFCC/004B2C?text=Mc" },
+            { name_pt: "Livermório", symbol: "Lv", atomic_number: 116, atomic_mass: 293, category: "post-transition-metal", category_pt: "Metal Pós-transição", state_pt: "Previsto: Sólido", group: 16, period: 7, x: 16, y: 7, imageUrl: "https://placehold.co/150x150/99FFCC/004B2C?text=Lv" },
+            { name_pt: "Tenessino", symbol: "Ts", atomic_number: 117, atomic_mass: 294, category: "halogen", category_pt: "Halogênio", state_pt: "Previsto: Sólido", group: 17, period: 7, x: 17, y: 7, imageUrl: "https://placehold.co/150x150/FF99FF/4B004B?text=Ts" },
+            { name_pt: "Oganessônio", symbol: "Og", atomic_number: 118, atomic_mass: 294, category: "noble-gas", category_pt: "Gás Nobre", state_pt: "Previsto: Gás", group: 18, period: 7, x: 18, y: 7, imageUrl: "https://placehold.co/150x150/CC99FF/3B004B?text=Og" },
+
+            // Preenchimento de 22 a 56 (para os Lanthanídeos e Actinídeos)
+            { name_pt: "Vazio", symbol: "", atomic_number: null, atomic_mass: null, category: "placeholder", category_pt: "", state_pt: "", group: 3, period: 6, x: 3, y: 6, displayText: "57-71<br>Lantanídeos" },
+            { name_pt: "Vazio", symbol: "", atomic_number: null, atomic_mass: null, category: "placeholder", category_pt: "", state_pt: "", group: 3, period: 7, x: 3, y: 7, displayText: "89-103<br>Actinídeos" },
+
+            // Lantanídeos (58-71)
+            { name_pt: "Cério", symbol: "Ce", atomic_number: 58, atomic_mass: 140.12, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 4, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Ce" },
+            { name_pt: "Praseodímio", symbol: "Pr", atomic_number: 59, atomic_mass: 140.91, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 5, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Pr" },
+            { name_pt: "Neodímio", symbol: "Nd", atomic_number: 60, atomic_mass: 144.24, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 6, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Nd" },
+            { name_pt: "Promécio", symbol: "Pm", atomic_number: 61, atomic_mass: 145, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 7, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Pm" },
+            { name_pt: "Samário", symbol: "Sm", atomic_number: 62, atomic_mass: 150.36, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 8, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Sm" },
+            { name_pt: "Európio", symbol: "Eu", atomic_number: 63, atomic_mass: 151.96, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 9, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Eu" },
+            { name_pt: "Gadolínio", symbol: "Gd", atomic_number: 64, atomic_mass: 157.25, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 10, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Gd" },
+            { name_pt: "Térbio", symbol: "Tb", atomic_number: 65, atomic_mass: 158.93, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 11, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Tb" },
+            { name_pt: "Disprósio", symbol: "Dy", atomic_number: 66, atomic_mass: 162.50, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 12, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Dy" },
+            { name_pt: "Hólmio", symbol: "Ho", atomic_number: 67, atomic_mass: 164.93, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 13, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Ho" },
+            { name_pt: "Érbio", symbol: "Er", atomic_number: 68, atomic_mass: 167.26, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 14, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Er" },
+            { name_pt: "Túlio", symbol: "Tm", atomic_number: 69, atomic_mass: 168.93, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 15, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Tm" },
+            { name_pt: "Itérbio", symbol: "Yb", atomic_number: 70, atomic_mass: 173.05, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 16, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Yb" },
+            { name_pt: "Lutécio", symbol: "Lu", atomic_number: 71, atomic_mass: 174.97, category: "lanthanide", category_pt: "Lantanídeo", state_pt: "Sólido", group: null, period: 6, x: 17, y: 9, imageUrl: "https://placehold.co/150x150/FFCCFF/4B004B?text=Lu" },
+
+            // Actinídeos (90-103)
+            { name_pt: "Tório", symbol: "Th", atomic_number: 90, atomic_mass: 232.04, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 4, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Th" },
+            { name_pt: "Protactínio", symbol: "Pa", atomic_number: 91, atomic_mass: 231.04, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 5, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Pa" },
+            { name_pt: "Urânio", symbol: "U", atomic_number: 92, atomic_mass: 238.03, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 6, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=U" },
+            { name_pt: "Netúnio", symbol: "Np", atomic_number: 93, atomic_mass: 237, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 7, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Np" },
+            { name_pt: "Plutônio", symbol: "Pu", atomic_number: 94, atomic_mass: 244, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 8, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Pu" },
+            { name_pt: "Amerício", symbol: "Am", atomic_number: 95, atomic_mass: 243, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 9, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Am" },
+            { name_pt: "Cúrio", symbol: "Cm", atomic_number: 96, atomic_mass: 247, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 10, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Cm" },
+            { name_pt: "Berquélio", symbol: "Bk", atomic_number: 97, atomic_mass: 247, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 11, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Bk" },
+            { name_pt: "Califórnio", symbol: "Cf", atomic_number: 98, atomic_mass: 251, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 12, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Cf" },
+            { name_pt: "Einstênio", symbol: "Es", atomic_number: 99, atomic_mass: 252, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 13, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Es" },
+            { name_pt: "Férmio", symbol: "Fm", atomic_number: 100, atomic_mass: 257, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 14, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Fm" },
+            { name_pt: "Mendelévio", symbol: "Md", atomic_number: 101, atomic_mass: 258, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 15, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Md" },
+            { name_pt: "Nobélio", symbol: "No", atomic_number: 102, atomic_mass: 259, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 16, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=No" },
+            { name_pt: "Laurêncio", symbol: "Lr", atomic_number: 103, atomic_mass: 262, category: "actinide", category_pt: "Actinídeo", state_pt: "Sólido", group: null, period: 7, x: 17, y: 10, imageUrl: "https://placehold.co/150x150/C2C2C2/333333?text=Lr" },
+        ];
+
+        // Mapeamento de símbolo para o objeto completo
+        const elementMap = periodicTableData.reduce((map, element) => {
+            if (element.symbol) {
+                map[element.symbol] = element;
+            }
+            return map;
+        }, {});
+
+        // Lista de categorias para a legenda
+        const categories = [
+            { id: "alkali-metal", name: "Metal Alcalino" },
+            { id: "alkaline-earth-metal", name: "Metal Alcalino-Terroso" },
+            { id: "transition-metal", name: "Metal de Transição" },
+            { id: "post-transition-metal", name: "Metal Pós-transição" },
+            { id: "metalloid", name: "Semimetal" },
+            { id: "nonmetal", name: "Não-metal" },
+            { id: "halogen", name: "Halogênio" },
+            { id: "noble-gas", name: "Gás Nobre" },
+            { id: "lanthanide", name: "Lantanídeo" },
+            { id: "actinide", name: "Actinídeo" },
+            { id: "unknown", name: "Propriedades Desconhecidas" },
+        ];
+
+        /**
+         * Renderiza a Tabela Periódica no DOM.
+         */
+        function renderTable() {
+            const container = document.getElementById('periodic-table-container');
+            let tableHtml = '';
+
+            // Adiciona números de Grupo (Colunas)
+            tableHtml += '<div class="grid-area pos-1-1 col-start-2 row-start-1 h-0"></div>'; // Espaço em branco
+            for (let i = 1; i <= 18; i++) {
+                tableHtml += `<div class="text-xs font-bold text-center text-gray-500 col-start-${i+1} row-start-1">${i}</div>`;
+            }
+
+            // Adiciona números de Período (Linhas)
+            for (let i = 1; i <= 7; i++) {
+                tableHtml += `<div class="text-xs font-bold text-right text-gray-500 pt-1 row-start-${i+1}">${i}</div>`;
+            }
+            tableHtml += `<div class="text-xs font-bold text-right text-gray-500 pt-1 row-start-9">6*</div>`;
+            tableHtml += `<div class="text-xs font-bold text-right text-gray-500 pt-1 row-start-10">7**</div>`;
+
+
+            // Adiciona os Lanthanide/Actinide placeholders na tabela principal (períodos 6 e 7, grupo 3)
+            const lanthanidePlaceholder = `<div class="element-cell transition-metal bg-blue-300 text-blue-900 flex justify-center items-center text-sm font-semibold row-start-7 col-start-3" onclick="alert('Lantanídeos (Z=57-71)')">
+                <span class="text-base font-bold">La-Lu</span><span class="text-xs block">57-71</span>
+            </div>`;
+            const actinidePlaceholder = `<div class="element-cell transition-metal bg-blue-300 text-blue-900 flex justify-center items-center text-sm font-semibold row-start-8 col-start-3" onclick="alert('Actinídeos (Z=89-103)')">
+                <span class="text-base font-bold">Ac-Lr</span><span class="text-xs block">89-103</span>
+            </div>`;
+
+            // Encontra os placeholders da tabela principal (para evitar duplicidade com os elementos reais)
+            const mainTableElements = periodicTableData.filter(e => e.y <= 7);
+
+            // Adiciona os elementos principais (Períodos 1 a 7, excluindo a sub-tabela)
+            mainTableElements.forEach(element => {
+                if (!element.symbol) return; // Ignora elementos sem símbolo (e.g., placeholders de vazio)
+
+                let classNames = `element-cell ${element.category} col-start-${element.x + 1} row-start-${element.y + 1}`;
+
+                // Substitui os placeholders de La e Ac
+                if (element.atomic_number === 57) {
+                    classNames = `element-cell ${element.category} col-start-3 row-start-7`;
+                    tableHtml += `<div class="element-cell transition-metal bg-blue-300 text-blue-900 flex justify-center items-center text-sm font-semibold row-start-7 col-start-3" onclick="alert('Os Lantanídeos (57-71) são listados na sub-tabela abaixo.')">
+                        <span class="text-base font-bold">57-71</span>
+                    </div>`;
+                    return;
+                }
+                if (element.atomic_number === 89) {
+                    classNames = `element-cell ${element.category} col-start-3 row-start-8`;
+                    tableHtml += `<div class="element-cell transition-metal bg-blue-300 text-blue-900 flex justify-center items-center text-sm font-semibold row-start-8 col-start-3" onclick="alert('Os Actinídeos (89-103) são listados na sub-tabela abaixo.')">
+                        <span class="text-base font-bold">89-103</span>
+                    </div>`;
+                    return;
+                }
+
+                tableHtml += `
+                    <div class="${classNames} p-0.5 md:p-1.5" onclick="openElementDetails('${element.symbol}')" title="${element.name_pt}">
+                        <div class="atomic-number text-xs font-semibold self-start">${element.atomic_number}</div>
+                        <div class="symbol text-2xl font-black">${element.symbol}</div>
+                        <div class="atomic-mass text-xs font-medium">${element.atomic_mass ? element.atomic_mass.toFixed(3).replace(/\.0+$/, '') : '—'}</div>
+                        <div class="name_pt text-[0.55rem] font-medium mt-0.5">${element.name_pt}</div>
+                    </div>
+                `;
+            });
+
+            // Adiciona a área para os Lanthanides (4f) e Actinides (5f) (Sub-tabela)
+            const lanthanides = periodicTableData.filter(e => e.period === 6 && e.group === null);
+            const actinides = periodicTableData.filter(e => e.period === 7 && e.group === null);
+
+            let subTableHtml = `
+                <div class="col-start-4 col-span-15 row-start-9 mt-4">
+                    <div class="grid grid-cols-15 gap-1 md:gap-4">
+                        <div class="text-xs font-bold text-right text-gray-500 pt-1 col-start-1">6*</div>
+                        ${lanthanides.map((element, index) => {
+                            let classNames = `element-cell ${element.category} col-start-${index + 2}`;
+                            return `
+                                <div class="${classNames}" onclick="openElementDetails('${element.symbol}')" title="${element.name_pt}">
+                                    <div class="atomic-number text-xs font-semibold self-start">${element.atomic_number}</div>
+                                    <div class="symbol text-2xl font-black">${element.symbol}</div>
+                                    <div class="atomic-mass text-xs font-medium">${element.atomic_mass ? element.atomic_mass.toFixed(3).replace(/\.0+$/, '') : '—'}</div>
+                                    <div class="name_pt text-[0.55rem] font-medium mt-0.5">${element.name_pt}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <div class="col-start-4 col-span-15 row-start-10 mt-4">
+                    <div class="grid grid-cols-15 gap-1 md:gap-4">
+                        <div class="text-xs font-bold text-right text-gray-500 pt-1 col-start-1">7**</div>
+                        ${actinides.map((element, index) => {
+                            let classNames = `element-cell ${element.category} col-start-${index + 2}`;
+                            return `
+                                <div class="${classNames}" onclick="openElementDetails('${element.symbol}')" title="${element.name_pt}">
+                                    <div class="atomic-number text-xs font-semibold self-start">${element.atomic_number}</div>
+                                    <div class="symbol text-2xl font-black">${element.symbol}</div>
+                                    <div class="atomic-mass text-xs font-medium">${element.atomic_mass ? element.atomic_mass.toFixed(3).replace(/\.0+$/, '') : '—'}</div>
+                                    <div class="name_pt text-[0.55rem] font-medium mt-0.5">${element.name_pt}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = tableHtml + subTableHtml;
+            renderLegend();
+        }
+
+        /**
+         * Renderiza a legenda de cores.
+         */
+        function renderLegend() {
+            const legendList = document.getElementById('legend-list');
+            legendList.innerHTML = categories.map(cat => `
+                <div class="flex items-center space-x-2">
+                    <div class="h-4 w-4 rounded-full ${cat.id} border border-gray-300"></div>
+                    <span class="text-gray-700">${cat.name}</span>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * Abre o modal de detalhes do elemento.
+         * @param {string} symbol - O símbolo do elemento.
+         */
+        function openElementDetails(symbol) {
+            const element = elementMap[symbol];
+            const modal = document.getElementById('element-details-modal');
+            const modalBody = document.getElementById('modal-body');
+
+            if (!element) {
+                modalBody.innerHTML = `<h2 class="text-2xl font-bold text-red-600">Elemento Não Encontrado</h2>`;
+                modal.style.display = 'flex';
+                return;
+            }
+
+            // Fallback para propriedades não definidas
+            const safeProperty = (value) => value !== undefined && value !== null ? value : 'N/A';
+
+            modalBody.innerHTML = `
+                <div class="flex flex-col md:flex-row items-center md:items-start gap-6">
+                    <!-- Coluna da Esquerda: Imagem e Destaque -->
+                    <div class="flex flex-col items-center md:items-start w-full md:w-1/3">
+                        <img src="${element.imageUrl}" alt="Imagem do ${element.name_pt}" class="w-40 h-40 rounded-xl object-cover mb-4 border-4 ${element.category}-border" onerror="this.onerror=null; this.src='https://placehold.co/150x150/6B7280/FFFFFF?text=Elemento+${element.symbol}';">
+
+                        <div class="text-center md:text-left">
+                            <h2 class="text-5xl font-extrabold mb-1 ${element.category === 'noble-gas' ? 'text-purple-800' : 'text-gray-900'}">${element.symbol}</h2>
+                            <p class="text-2xl font-bold text-gray-700">${element.name_pt}</p>
+                            <p class="text-lg font-medium text-gray-500">Número Atômico: <span class="font-bold text-gray-800">${element.atomic_number}</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Coluna da Direita: Características -->
+                    <div class="w-full md:w-2/3">
+                        <h3 class="text-2xl font-bold border-b-2 pb-2 mb-4 text-${element.category}-text">Propriedades Principais</h3>
+
+                        <div class="grid grid-cols-2 gap-4 text-gray-700">
+                            <!-- Bloco de Propriedade -->
+                            <div class="bg-gray-50 p-3 rounded-lg border">
+                                <span class="block text-sm font-semibold text-gray-500">Massa Atômica</span>
+                                <span class="block text-lg font-bold">${safeProperty(element.atomic_mass)} u</span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg border">
+                                <span class="block text-sm font-semibold text-gray-500">Categoria</span>
+                                <span class="block text-lg font-bold ${element.category}">${safeProperty(element.category_pt)}</span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg border">
+                                <span class="block text-sm font-semibold text-gray-500">Estado Padrão</span>
+                                <span class="block text-lg font-bold">${safeProperty(element.state_pt)}</span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg border">
+                                <span class="block text-sm font-semibold text-gray-500">Configuração Eletrônica</span>
+                                <span class="block text-lg font-bold break-all">${safeProperty(element.configuration)}</span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg border">
+                                <span class="block text-sm font-semibold text-gray-500">Densidade</span>
+                                <span class="block text-lg font-bold">${safeProperty(element.density)}</span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg border">
+                                <span class="block text-sm font-semibold text-gray-500">Eletronegatividade</span>
+                                <span class="block text-lg font-bold">${safeProperty(element.electronegativity)}</span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg border">
+                                <span class="block text-sm font-semibold text-gray-500">Ponto de Fusão</span>
+                                <span class="block text-lg font-bold">${safeProperty(element.melting_point)}</span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg border">
+                                <span class="block text-sm font-semibold text-gray-500">Ponto de Ebulição</span>
+                                <span class="block text-lg font-bold">${safeProperty(element.boiling_point)}</span>
+                            </div>
+                            <div class="bg-gray-50 p-3 rounded-lg border">
+                                <span class="block text-sm font-semibold text-gray-500">Período / Grupo</span>
+                                <span class="block text-lg font-bold">${safeProperty(element.period)} / ${safeProperty(element.group) || 'N/A'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Mostra o modal
+            modal.style.display = 'flex';
+        }
+
+        /**
+         * Fecha o modal de detalhes do elemento.
+         */
+        function closeElementDetails() {
+            document.getElementById('element-details-modal').style.display = 'none';
+        }
+
+        // Inicializa a tabela ao carregar a página
+        window.onload = renderTable;
+    </script>
+</body>
+</html>
